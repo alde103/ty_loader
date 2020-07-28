@@ -19,6 +19,14 @@ defmodule TyLoader do
     "Teensy 1.0" => "--mcu=at90usb162"
   }
 
+  @mode_map %{
+    "wait for device" => "-w",
+    "hard reboot" => "-r",
+    "soft reboot" => "-s",
+    "no reboot" => "-n",
+    "verbose" => "-v",
+  }
+
   defstruct cmd_path: nil
 
   def start_link(opts \\ []) do
@@ -27,7 +35,7 @@ defmodule TyLoader do
 
   def init(_args) do
     cmd_path =
-    :code.priv_dir(:tycmdex)
+    :code.priv_dir(:ty_loader)
     |> to_string()
     |> Path.join("/teensy_loader_cli")
 
@@ -40,13 +48,18 @@ defmodule TyLoader do
   def upload(pid, args) do
     file = Keyword.fetch!(args, :file)
     device = Keyword.fetch!(args, :device)
-    GenServer.call(pid, {:upload, file, device}, 15000)
+    mode = Keyword.get(args, :mode, "wait_for_device")
+    GenServer.call(pid, {:upload, mode, file, device}, 15000)
   end
 
-  def handle_call({:upload, file, device}, _from, %{cmd_path: cmd_path} = state) do
+  def handle_call({:upload, mode, file, device}, _from, %{cmd_path: cmd_path} = state) do
     processor = Map.fetch!(@device_map, device)
+    cmd_mode = Map.get(@mode_map, mode, "-w")
+
+    Logger.info("(#{__MODULE__}) An upload to #{processor} with mode #{cmd_mode}")
+
     response =
-      MuonTrap.cmd(cmd_path, [processor, "-w", file], stderr_to_stdout: true)
+      MuonTrap.cmd(cmd_path, [processor, cmd_mode, file], stderr_to_stdout: true)
       |> cmd_response()
     {:reply, response, state}
   end
