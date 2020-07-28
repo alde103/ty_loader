@@ -109,7 +109,8 @@ defmodule TyLoader.MixProject do
   defp deps do
     [
       {:elixir_make, "~> 0.5", runtime: false},
-      {:ex_doc, "~> 0.19", only: :dev}
+      {:ex_doc, "~> 0.19", only: :dev},
+      {:muontrap, "~> 0.5.0"}
     ]
   end
 end
